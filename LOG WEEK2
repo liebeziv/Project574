@@ -1,0 +1,48 @@
+Weekly Work Report: WEEK 2
+Work Period: July 28, 2025 - August 3, 2025
+
+Key Tasks: Reproduce a bug, attempt multiple fixes, and draft a real-world use case for next week's testing.
+
+Key Achievements: Partial fix, but issues still exist; the fix is not "elegant." (Issue #1980: Training day display order problem).
+————————————————————————————————————————————————————————————————
+Detailed Work Log
+Attempted Fix 1: CSS Flexbox
+
+Method: Used Flexbox to force sorting from a CSS perspective.
+use
+    .training-day[data-day="Monday"] { order: 1; }
+    Outcome: Partially successful, but highly dependent on template cooperation and data attributes.
+   Attempted Fix 2: Dynamic JavaScript Sorting
+
+Method:
+
+Added an event listener.
+
+Selected the container and the day elements.
+
+Sorted the elements based on a predefined order using the dataset.day attribute.
+
+Re-appended the sorted elements to the container.
+    add event listerer
+    const container
+    const days
+    
+
+    use days sort
+    	const dayA = a.dataset.day;
+        const dayB = b.dataset.day;
+        return dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
+  add to container again
+
+    Outcome: The code runs, but there's a frequent refresh and flickering issue on the page. The root cause is undetermined, and there are no error messages.
+
+    Attempted Fix 3: Backend Solution
+
+Method: Started learning the basics of Django from the official documentation.
+
+Outcome: Gained a foundational understanding of Django concepts. Began to locate the issue within the query files, but more time is needed to fully grasp the Django architecture.
+
+Next Steps: Plan to implement a corresponding solution in Week 3.
+    
+    
+    
