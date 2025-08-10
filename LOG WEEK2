@@ -9,10 +9,13 @@ Detailed Work Log
 Attempted Fix 1: CSS Flexbox
 
 Method: Used Flexbox to force sorting from a CSS perspective.
-use
-    .training-day[data-day="Monday"] { order: 1; }
-    Outcome: Partially successful, but highly dependent on template cooperation and data attributes.
-   Attempted Fix 2: Dynamic JavaScript Sorting
+use .training-day[data-day="Monday"] { order: 1; }
+
+Outcome: Partially successful, but highly dependent on template cooperation and data attributes.
+Attempted Fix 
+
+
+2: Dynamic JavaScript Sorting
 
 Method:
 
@@ -27,22 +30,29 @@ Re-appended the sorted elements to the container.
     const container
     const days
     
-
     use days sort
     	const dayA = a.dataset.day;
         const dayB = b.dataset.day;
         return dayOrder.indexOf(dayA) - dayOrder.indexOf(dayB)
   add to container again
 
-    Outcome: The code runs, but there's a frequent refresh and flickering issue on the page. The root cause is undetermined, and there are no error messages.
+Outcome: The code runs, but there's a frequent refresh and flickering issue on the page. 
+The root cause is undetermined, and there are no error messages.
 
-    Attempted Fix 3: Backend Solution
+Attempted Fix 3: Backend Solution
+class WorkoutDetailView(LoginRequiredMixin, DetailView): def get_context_data(self, **kwargs): context = super().get_context_data(**kwargs) 
+problem non order by！ context['days'] = self.object.day_set.all() 
+SQL: SELECT * FROM manager_day WHERE training_id = ? #
 
 Method: Started learning the basics of Django from the official documentation.
 
 Outcome: Gained a foundational understanding of Django concepts. Began to locate the issue within the query files, but more time is needed to fully grasp the Django architecture.
 
 Next Steps: Plan to implement a corresponding solution in Week 3.
-    
-    
-    
+
+        
+Feedback:avoid refresh: do not use fact use meta  calculate one time.
+
+about local the sunday is first or end array  set monday to be 1 sunday to be 0 or 7
+
+donot have to sort from backend 
