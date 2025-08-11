@@ -1,0 +1,126 @@
+Work Period: 4 August - 10 August 2025 
+Main Tasks: Continued backend research and framework analysis of wger project bug fixes 
+Main Results: Discovered that Issue #1980 has been fixed by the community through a full backend refactoring. Gained a deeper understanding of the codebase architecture and identified a complete fix implementation.
+————————————————————————————————————————————————————————————————
+Discovery Community Fix Programme 
+DECISION: Based on feedback from last week, it was decided not to proceed with the backend changes.
+DISCOVERY: However, the discovery community has pushed a comprehensive backend fix for Issue #1980.
+
+class DayNg(models.Model): 
+ order = models.PositiveIntegerField(default=1, db_index=True) 
+ class Meta: 
+ ordering = ['order'] # Critical fix: explicit database ordering
+
+class Slot(models.Model): 
+ order = models.PositiveIntegerField(default=1, db_index=True) 
+ class Meta: 
+ ordering = ['order'] # Explicit ordering rules for each level
+
+class SlotEntry(models.Model): 
+ order = models.PositiveIntegerField() 
+ class Meta: 
+ ordering = ['order', 'id'] # double ordering guarantees
+
+Fix Analysis:
+
+Root Cause: The original Day model lacked explicit database level ordering 
+Solution: Complete data model refactoring with explicit Meta.ordering at each level 
+Performance Optimisation: Add database index (db_index=True) to optimise ordering 
+Reliability: Three-tier architecture ensures stable ordering in all views
+
+Code Framework Analysis 
+Focus: Spend remaining time analysing the structure of the wger code base.
+
+Key Learning Outcome:
+
+Django ORM Model Relationships and Meta Configuration 
+Migration System for Database Architecture Changes 
+ordering = ['field'] How to Ensure Consistent Database-Level Ordering 
+Three-Tier Architecture: DayNg (Training Day) -> Slot (Time Period) -> SlotEntry (Exercise)
+
+Reflect and learn 
+Technical Insights:
+
+Back-end model-level fixes are more robust than front-end sort patches 
+Database Meta.ordering provides consistent results across all queries 
+Community open source projects often have comprehensive solutions
+
+Process Learning:
+
+Always check for the latest commit/PR before implementing a fix 
+It is critical to understand the existing codebase architecture before making changes 
+Migration files contain valuable information about the evolution of the system
+
+Next week's plan 
+Goal: Find new bugs to fix in the wger project.
+Strategy:
+
+Check GitHub Issues for unresolved bugs 
+Focus on smaller, manageable issues that are suitable for learning 
+Apply what you've learnt about Django to implement suitable fixes 
+Prioritise back-end understanding over quick front-end patches
+
+
+
+工作周期：2025年8月4日 - 8月10日
+主要任务： 继续后端调研和wger项目bug修复的框架分析
+主要成果： 发现Issue #1980已被社区通过全面的后端重构修复。深入理解了代码库架构并确定了完整的修复实现。
+————————————————————————————————————————————————————————————————
+Detailed Work Log
+发现社区修复方案
+决定： 根据上周反馈，决定不继续进行后端修改。
+发现： 然而，发现社区已经为Issue #1980推送了全面的后端修复方案。
+
+class DayNg(models.Model):
+    order = models.PositiveIntegerField(default=1, db_index=True)
+    class Meta:
+        ordering = ['order']  # 关键修复：明确的数据库排序
+
+class Slot(models.Model):
+    order = models.PositiveIntegerField(default=1, db_index=True)
+    class Meta:
+        ordering = ['order']  # 每层都有明确排序规则
+
+class SlotEntry(models.Model):
+    order = models.PositiveIntegerField()
+    class Meta:
+        ordering = ['order', 'id']  # 双重排序保障
+
+修复分析：
+
+根本原因： 原始Day模型缺少明确的数据库级别排序
+解决方案： 完整的数据模型重构，每个层级都有清晰的Meta.ordering
+性能优化： 添加数据库索引（db_index=True）来优化排序
+可靠性： 三层架构确保所有视图中的稳定排序
+
+代码框架分析
+重点： 花费剩余时间分析wger代码库结构。
+
+主要学习成果：
+
+Django ORM模型关系和Meta配置
+数据库架构变更的迁移系统
+ordering = ['field']如何确保一致的数据库级排序
+三层架构：DayNg (训练日) -> Slot (时间段) -> SlotEntry (练习)
+
+反思和学习
+技术洞察：
+
+后端模型级修复比前端排序补丁更稳健
+数据库Meta.ordering在所有查询中提供一致的结果
+社区开源项目通常有全面的解决方案
+
+流程学习：
+
+在实现修复之前始终检查最新的提交/PR
+在进行更改之前，理解现有代码库架构至关重要
+迁移文件包含关于系统演进的宝贵信息
+
+下周计划
+目标： 在wger项目中寻找新的bug进行修复。
+策略：
+
+查看GitHub Issues中未解决的bug
+专注于适合学习的较小、可管理的问题
+应用所学的Django知识来实现合适的修复
+优先考虑后端理解而非快速的前端补丁
