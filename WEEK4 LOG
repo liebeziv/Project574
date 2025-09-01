@@ -1,3 +1,69 @@
-在calander页面，右部滚动拉到底之后出现无法显示最底部的一条信息的情况
+Calender web view does not scroll far enough to view full workout log
+https://github.com/wger-project/wger/issues/1993
 #1993
 
+console：
+// add extra padding for button body
+document.body.style.paddingBottom = '80px';
+
+
+// find and adjust main container
+const container = document.querySelector('.container') || 
+                 document.querySelector('main') || 
+                 document.querySelector('#content');
+if (container) {
+    container.style.paddingBottom = '100px';
+    container.style.marginBottom = '20px';
+}
+
+// make sure the page have enough rolling space
+const html = document.documentElement;
+const body = document.body;
+const currentHeight = Math.max(html.scrollHeight, body.scrollHeight);
+body.style.minHeight = (currentHeight + 50) + 'px';
+
+
+CSS:
+/* sticky footer */
+
+html {
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    margin-bottom: 5rem !important; /* Margin bottom by footer height */
+}
+
+footer {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 4rem; /* Set the fixed height of the footer here */
+}
+
+
+/*
+
+solution： Use Grid
+html {
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    margin: 0; /remove current margin bottom
+}
+
+main, .main-content {
+    grid-row: 2;
+    overflow-y: auto;
+}
+
+footer {
+    grid-row: 3;
+    position: static; 
+    margin-top: auto;
+}
