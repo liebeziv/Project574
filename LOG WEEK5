@@ -1,1 +1,60 @@
 
+I discovered the SCSS directory when I was preparing to deploy a CSS solution 
+Started researching SCSS for deployment and encountered some difficulties, such as an unsuccessful initial deployment 
+Realised that I had to compile SCSS 
+What started out as a very quick deployment and test consumed quite a bit of time due to the addition of SCSS
+
+The new SCSS
+html {
+    height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    margin: 0;
+}
+
+
+main, 
+.main-content,
+.container-main {
+    grid-row: 2;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+
+footer,
+.footer {
+    grid-row: 3;
+    position: static;
+    margin-top: auto;
+    background-color: $wger-light-2;
+    border-top: 1px solid $wger-light-3;
+}
+
+
+@media (max-width: 576px) {
+    body {
+        grid-template-rows: auto 1fr auto;
+    }
+    
+    main, 
+    .main-content {
+        padding-bottom: 1rem;
+    }
+}
+
+
+
+Restart Docker and import user data.
+Challenge: When directly importing data using the `LOAD DATA` command, an `IntegrityError` occurred because the foreign key constraint (`gym_id`) in the data file did not exist in the database.
+
+The solution was to manually import the dependent gym data file first, followed by the user data.
+
+最终成功导入了包含 10 个用户的测试数据集，为验证 CSS 问题做好了准备。
+使用了1920x1080 桌面尺寸 1440x900常用的笔记本尺寸
+浏览器 Chrome Firefox Edge进行测试
+目前条件下，我的部署方案可以适配，寻求pull request
