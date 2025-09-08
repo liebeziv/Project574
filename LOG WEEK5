@@ -58,3 +58,7 @@ The solution was to manually import the dependent gym data file first, followed 
 使用了1920x1080 桌面尺寸 1440x900常用的笔记本尺寸
 浏览器 Chrome Firefox Edge进行测试
 目前条件下，我的部署方案可以适配，寻求pull request
+
+Note
+SCSS:sharing the CSS for dynamic reosurce and need compile
+CSS：static resource and 
