@@ -1,1 +1,50 @@
+本周我尝试添加新的特性 Add “Calories burned” as an acceptable measure unit for cardio (UI + API) #2019
 
+如何完成：
+尝试在现有的model中添加单位支持以及在UI界面上进行改进
+
+在wger/manager/consts.py
+增加：REP_UNIT_CALORIES = 3
+
+Creating a data migration to add calorie units to the database
+from django.db import migrations
+
+def add_calories_unit(apps, schema_editor):
+    """Adding Calorie Units to the RepetitionUnit Table"""
+    RepetitionUnit = apps.get_model('core', 'RepetitionUnit')
+    
+    # Add calorie units
+    calories_unit, created = RepetitionUnit.objects.get_or_create(
+        id=3,
+        defaults={'name': 'Calories'}
+    )
+    if created:
+        print("Added 'Calories' repetition unit")
+
+def remove_calories_unit(apps, schema_editor):
+    """Remove calorie units """
+    RepetitionUnit = apps.get_model('core', 'RepetitionUnit')
+    RepetitionUnit.objects.filter(id=3).delete()
+
+class Migration(migrations.Migration):
+    
+    dependencies = [
+        ('manager', 'Last migration file name'),  # Replace with the actual file name
+        ('core', 'Last core migration file name'),  # Ensuring core app dependencies
+    ]
+
+    operations = [
+        migrations.RunPython(
+            add_calories_unit,
+            remove_calories_unit,
+        ),
+    ]
+
+
+Modifying the WorkoutLog model to better support calories
+Modify the clean() method in wger/manager/models/log.py
+
+
+Updating the __str__ method to display calories
+
+Add JavaScript support
