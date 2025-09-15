@@ -1,10 +1,10 @@
-本周我尝试添加新的特性 Add “Calories burned” as an acceptable measure unit for cardio (UI + API) #2019
+This week I try to add new features Add "Calories burned" as an acceptable measure unit for cardio (UI + API) #2019
 
-如何完成：
-尝试在现有的model中添加单位支持以及在UI界面上进行改进
+How it's done: 
+Trying to add unit support to an existing mod and improvements in the UI interface
 
-在wger/manager/consts.py
-增加：REP_UNIT_CALORIES = 3
+In wger/manager/consts.py 
+add: REP_UNIT_CALORIES = 3
 
 Creating a data migration to add calorie units to the database
 from django.db import migrations
