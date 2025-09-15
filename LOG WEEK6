@@ -1,3 +1,11 @@
+比起直接记录卡路里，尝试从记录运动的时候，自动生成卡路里
+操作流程（当前）：直接记录卡路里
+操作流程：记录运动——自动生成卡路里——同步关联到营养计划
+开发需求：自动运动——数据生成 关联公共卡路里数据库
+         UI界面优化：增加对应的弹窗和对应性卡路里项
+         关联营养计划
+         对应营养计划新模块
+
 This week I try to add new features Add "Calories burned" as an acceptable measure unit for cardio (UI + API) #2019
 
 How it's done: 
