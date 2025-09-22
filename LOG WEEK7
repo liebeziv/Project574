@@ -1,0 +1,386 @@
+Record exercise→automatically generate calories→synchronously link to nutrition plan
+
+Architecture
+Public Calorie Database - stores mapping of exercise to calories
+Auto-calculation service - automatically calculates calories burned based on exercise data
+UI optimisation - add pop-up window to display calorie information
+Nutrition Plan Integration - Automatic synchronisation to the Nutrition Plan module
+
+User logs exercise → system looks up calorie database → automatically calculates calories burned → displayed in UI pop-up → synchronised to nutritional programme
+
+Building a foundational data model
+
+{
+    "pk": 8,
+    "fields": {
+        "name": "Calories"
+    },
+    "model": "core.repetitionunit"
+}
+
+Create a Calorie Database Model
+
+# Standard Library
+from decimal import Decimal
+from typing import Optional
+
+# Django
+from django.db import models
+from django.utils.translation import gettext_lazy as _
+
+# wger
+from wger.exercises.models import Exercise
+
+
+class ExerciseCalorieData(models.Model):
+    """
+    Public database of calorie burn rates for exercises
+    
+    This model stores the relationship between exercises and their calorie burn rates
+    based on different factors like intensity, duration, and user weight.
+    """
+    
+    class Meta:
+        verbose_name = _('Exercise Calorie Data')
+        verbose_name_plural = _('Exercise Calorie Data')
+        ordering = ['exercise__name', 'intensity_level']
+        unique_together = ['exercise', 'intensity_level', 'base_weight_kg']
+    
+    exercise = models.ForeignKey(
+        Exercise,
+        verbose_name=_('Exercise'),
+        on_delete=models.CASCADE,
+        related_name='calorie_data'
+    )
+    
+    intensity_level = models.CharField(
+        max_length=20,
+        choices=[
+            ('low', _('Low Intensity')),
+            ('moderate', _('Moderate Intensity')),
+            ('high', _('High Intensity')),
+            ('very_high', _('Very High Intensity')),
+        ],
+        default='moderate',
+        verbose_name=_('Intensity Level')
+    )
+    
+    base_weight_kg = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=70.0,
+        verbose_name=_('Base Weight (kg)'),
+        help_text=_('Reference weight for calorie calculation')
+    )
+    
+    calories_per_minute = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_('Calories per Minute'),
+        help_text=_('Calories burned per minute at base weight')
+    )
+    
+    calories_per_km = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_('Calories per Kilometer'),
+        help_text=_('Calories burned per kilometer (for distance-based exercises)')
+    )
+    
+    calories_per_rep = models.DecimalField(
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_('Calories per Repetition'),
+        help_text=_('Calories burned per repetition (for strength exercises)')
+    )
+    
+    is_cardio = models.BooleanField(
+        default=False,
+        verbose_name=_('Is Cardio Exercise'),
+        help_text=_('Whether this exercise is primarily cardiovascular')
+    )
+    
+    is_strength = models.BooleanField(
+        default=False,
+        verbose_name=_('Is Strength Exercise'),
+        help_text=_('Whether this exercise is primarily strength training')
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name=_('Created At')
+    )
+    
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name=_('Updated At')
+    )
+    
+    def __str__(self):
+        return f'{self.exercise.name} - {self.get_intensity_level_display()} ({self.calories_per_minute} cal/min)'
+    
+    def calculate_calories_burned(self, duration_minutes: Optional[Decimal] = None, 
+                                distance_km: Optional[Decimal] = None,
+                                repetitions: Optional[int] = None,
+                                user_weight_kg: Optional[Decimal] = None) -> Decimal:
+        """
+        Calculate calories burned based on exercise parameters
+        
+        Args:
+            duration_minutes: Duration of exercise in minutes
+            distance_km: Distance covered in kilometers
+            repetitions: Number of repetitions performed
+            user_weight_kg: User's weight in kg for adjustment
+            
+        Returns:
+            Calculated calories burned
+        """
+        if user_weight_kg is None:
+            user_weight_kg = self.base_weight_kg
+            
+        # Weight adjustment factor (linear scaling)
+        weight_factor = user_weight_kg / self.base_weight_kg
+        
+        calories = Decimal('0')
+        
+        # Calculate based on duration (most common for cardio)
+        if duration_minutes and self.calories_per_minute:
+            calories += self.calories_per_minute * duration_minutes * weight_factor
+            
+        # Calculate based on distance (for running, cycling, etc.)
+        if distance_km and self.calories_per_km:
+            calories += self.calories_per_km * distance_km * weight_factor
+            
+        # Calculate based on repetitions (for strength exercises)
+        if repetitions and self.calories_per_rep:
+            calories += self.calories_per_rep * repetitions * weight_factor
+            
+        return calories.quantize(Decimal('0.01'))
+
+
+class UserCaloriePreference(models.Model):
+    """
+    User-specific preferences for calorie calculation
+    """
+    
+    class Meta:
+        verbose_name = _('User Calorie Preference')
+        verbose_name_plural = _('User Calorie Preferences')
+    
+    user = models.OneToOneField(
+        'auth.User',
+        on_delete=models.CASCADE,
+        related_name='calorie_preferences',
+        verbose_name=_('User')
+    )
+    
+    auto_calculate_calories = models.BooleanField(
+        default=True,
+        verbose_name=_('Auto Calculate Calories'),
+        help_text=_('Automatically calculate calories from exercise logs')
+    )
+    
+    sync_with_nutrition = models.BooleanField(
+        default=True,
+        verbose_name=_('Sync with Nutrition Plan'),
+        help_text=_('Automatically sync burned calories with nutrition plan')
+    )
+    
+    intensity_multiplier = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=1.0,
+        verbose_name=_('Intensity Multiplier'),
+        help_text=_('Personal intensity adjustment factor (0.8-1.2)')
+    )
+    
+    def __str__(self):
+        return f'Calorie preferences for {self.user.username}'
+
+Create database migration
+  from django.db import migrations, models
+import django.db.models.deletion
+from decimal import Decimal
+
+
+def add_calories_repetition_unit(apps, schema_editor):
+    """Add Calories as a repetition unit"""
+    RepetitionUnit = apps.get_model('core', 'RepetitionUnit')
+    
+    # Add calories unit
+    calories_unit, created = RepetitionUnit.objects.get_or_create(
+        id=8,
+        defaults={'name': 'Calories'}
+    )
+    if created:
+        print("Added 'Calories' repetition unit")
+
+
+def remove_calories_repetition_unit(apps, schema_editor):
+    """Remove calories repetition unit"""
+    RepetitionUnit = apps.get_model('core', 'RepetitionUnit')
+    RepetitionUnit.objects.filter(id=8).delete()
+
+
+def create_sample_calorie_data(apps, schema_editor):
+    """Create sample calorie data for common exercises"""
+    ExerciseCalorieData = apps.get_model('manager', 'ExerciseCalorieData')
+    Exercise = apps.get_model('exercises', 'Exercise')
+    
+    # Sample data for common exercises
+    sample_data = [
+        # Cardio exercises
+        {
+            'exercise_name': 'Running',
+            'intensity_level': 'moderate',
+            'calories_per_minute': Decimal('10.0'),
+            'calories_per_km': Decimal('60.0'),
+            'is_cardio': True,
+        },
+        {
+            'exercise_name': 'Cycling',
+            'intensity_level': 'moderate',
+            'calories_per_minute': Decimal('8.0'),
+            'calories_per_km': Decimal('30.0'),
+            'is_cardio': True,
+        },
+        {
+            'exercise_name': 'Swimming',
+            'intensity_level': 'moderate',
+            'calories_per_minute': Decimal('12.0'),
+            'is_cardio': True,
+        },
+        {
+            'exercise_name': 'Walking',
+            'intensity_level': 'low',
+            'calories_per_minute': Decimal('4.0'),
+            'calories_per_km': Decimal('50.0'),
+            'is_cardio': True,
+        },
+        # Strength exercises
+        {
+            'exercise_name': 'Push-ups',
+            'intensity_level': 'moderate',
+            'calories_per_rep': Decimal('0.5'),
+            'is_strength': True,
+        },
+        {
+            'exercise_name': 'Squats',
+            'intensity_level': 'moderate',
+            'calories_per_rep': Decimal('0.8'),
+            'is_strength': True,
+        },
+        {
+            'exercise_name': 'Pull-ups',
+            'intensity_level': 'high',
+            'calories_per_rep': Decimal('1.0'),
+            'is_strength': True,
+        },
+    ]
+    
+    for data in sample_data:
+        try:
+            exercise = Exercise.objects.filter(name__icontains=data['exercise_name']).first()
+            if exercise:
+                ExerciseCalorieData.objects.get_or_create(
+                    exercise=exercise,
+                    intensity_level=data['intensity_level'],
+                    defaults={
+                        'base_weight_kg': Decimal('70.0'),
+                        'calories_per_minute': data.get('calories_per_minute'),
+                        'calories_per_km': data.get('calories_per_km'),
+                        'calories_per_rep': data.get('calories_per_rep'),
+                        'is_cardio': data.get('is_cardio', False),
+                        'is_strength': data.get('is_strength', False),
+                    }
+                )
+        except Exception as e:
+            print(f"Could not create calorie data for {data['exercise_name']}: {e}")
+
+
+def remove_sample_calorie_data(apps, schema_editor):
+    """Remove sample calorie data"""
+    ExerciseCalorieData = apps.get_model('manager', 'ExerciseCalorieData')
+    ExerciseCalorieData.objects.all().delete()
+
+
+class Migration(migrations.Migration):
+    
+    dependencies = [
+        ('manager', '0023_change_validators'),
+        ('core', '0021_auto_20211028_1113'),  # Latest core migration
+        ('exercises', '0001_initial'),  # Ensure exercises app is available
+    ]
+
+    operations = [
+        # Add calories repetition unit
+        migrations.RunPython(
+            add_calories_repetition_unit,
+            remove_calories_repetition_unit,
+        ),
+        
+        # Create ExerciseCalorieData model
+        migrations.CreateModel(
+            name='ExerciseCalorieData',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('intensity_level', models.CharField(choices=[('low', 'Low Intensity'), ('moderate', 'Moderate Intensity'), ('high', 'High Intensity'), ('very_high', 'Very High Intensity')], default='moderate', max_length=20, verbose_name='Intensity Level')),
+                ('base_weight_kg', models.DecimalField(decimal_places=2, default=70.0, help_text='Reference weight for calorie calculation', max_digits=5, verbose_name='Base Weight (kg)')),
+                ('calories_per_minute', models.DecimalField(decimal_places=2, help_text='Calories burned per minute at base weight', max_digits=6, null=True, verbose_name='Calories per Minute')),
+                ('calories_per_km', models.DecimalField(blank=True, decimal_places=2, help_text='Calories burned per kilometer (for distance-based exercises)', max_digits=6, null=True, verbose_name='Calories per Kilometer')),
+                ('calories_per_rep', models.DecimalField(blank=True, decimal_places=2, help_text='Calories burned per repetition (for strength exercises)', max_digits=6, null=True, verbose_name='Calories per Repetition')),
+                ('is_cardio', models.BooleanField(default=False, help_text='Whether this exercise is primarily cardiovascular', verbose_name='Is Cardio Exercise')),
+                ('is_strength', models.BooleanField(default=False, help_text='Whether this exercise is primarily strength training', verbose_name='Is Strength Exercise')),
+                ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='Created At')),
+                ('updated_at', models.DateTimeField(auto_now=True, verbose_name='Updated At')),
+                ('exercise', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='calorie_data', to='exercises.exercise', verbose_name='Exercise')),
+            ],
+            options={
+                'verbose_name': 'Exercise Calorie Data',
+                'verbose_name_plural': 'Exercise Calorie Data',
+                'ordering': ['exercise__name', 'intensity_level'],
+            },
+        ),
+        
+        # Create UserCaloriePreference model
+        migrations.CreateModel(
+            name='UserCaloriePreference',
+            fields=[
+                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('auto_calculate_calories', models.BooleanField(default=True, help_text='Automatically calculate calories from exercise logs', verbose_name='Auto Calculate Calories')),
+                ('sync_with_nutrition', models.BooleanField(default=True, help_text='Automatically sync burned calories with nutrition plan', verbose_name='Sync with Nutrition Plan')),
+                ('intensity_multiplier', models.DecimalField(decimal_places=2, default=1.0, help_text='Personal intensity adjustment factor (0.8-1.2)', max_digits=3, verbose_name='Intensity Multiplier')),
+                ('user', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, related_name='calorie_preferences', to='auth.user', verbose_name='User')),
+            ],
+            options={
+                'verbose_name': 'User Calorie Preference',
+                'verbose_name_plural': 'User Calorie Preferences',
+            },
+        ),
+        
+        # Add unique constraint for ExerciseCalorieData
+        migrations.AddConstraint(
+            model_name='exercisecaloriedata',
+            constraint=models.UniqueConstraint(fields=('exercise', 'intensity_level', 'base_weight_kg'), name='unique_exercise_intensity_weight'),
+        ),
+        
+        # Create sample calorie data
+        migrations.RunPython(
+            create_sample_calorie_data,
+            remove_sample_calorie_data,
+        ),
+    ]
+
+
+
+Next week's plan is to finish:
+Create a Calorie Calculation Service
+WorkoutLog model
+Create Management Command
+Create test files
