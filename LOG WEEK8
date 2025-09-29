@@ -1,70 +1,24 @@
 Research Ideas
 
-Technology pre-study: investigate the data structure, rate limitation and Webhook capability of mainstream platforms (Fitbit, Garmin, Apple Health, Strava), and evaluate how the existing functionality of Django/Celery can support periodic synchronisation.
+Technology pre-study: investigate the data structure, rate limitation and Webhook capability of mainstream platforms (honor, Garmin, Apple Health, Strava，Honor), and evaluate how the existing functionality of Django/Celery can support periodic synchronisation.
 Architecture sketch: divide into wearable client configuration, wearable access token user authorisation, wearable sampling activity data, service layer adapters and task scheduling modules, and interface with training logs/nutrition modules via signals/services.
-Prototyping: Prioritise the implementation of a minimal service provider (simulated environment) + Fitbit adapter to validate key aspects such as authorisation refresh, activity entry, and automatic log generation.
+Prototyping: Prioritise the implementation of a minimal service provider (simulated environment) + honor adapter to validate key aspects such as authorisation refresh, activity entry, and automatic log generation.
 Validation and Iteration: Validate the synchronisation process through unit testing and manual triggering of Celery tasks, evaluate options for expanding more service providers and front-end configuration portals.
 
-Simplified prototype
+{
+  "samplePoints": {
+    "com.huawei.instantaneous.body_weight": {
+      "startTime": 1640210232971000000,
+      "endTime": 1640210232971000000,
+      "dataTypeName": "com.huawei.instantaneous.body_weight",
+      "value": [
+        {"fieldName": "body_weight", "floatValue": 81.80000305175781},
+        {"fieldName": "protein_rate", "floatValue": 0.0}
+      ]
+    }
+  }
+}
 
-# wger/wearables/models.py 
-class WearableAccessToken(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    provider = models.CharField(max_length=20, choices=[('mock', 'Mock')])
-    access_token = models.CharField(max_length=255)
-    last_sync = models.DateTimeField(null=True, blank=True)
+next：Simplified prototype
 
-class WearableSample(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    provider = models.CharField(max_length=20)
-    kind = models.CharField(max_length=40)
-    start_time = models.DateTimeField()
-    duration_seconds = models.PositiveIntegerField()
-    calories = models.DecimalField(max_digits=7, decimal_places=2, null=True, blank=True)
-    status = models.CharField(max_length=12, default='pending')
-
-# wger/wearables/services/mock.py 
-from decimal import Decimal
-from django.utils import timezone
-from wger.wearables.models import WearableSample
-
-def sync_mock_token(token):
-    now = timezone.now()
-    sample, _ = WearableSample.objects.get_or_create(
-        provider='mock',
-        user=token.user,
-        start_time=now,
-        defaults={
-            'kind': 'Mock Cardio',
-            'duration_seconds': 1800,
-            'calories': Decimal('200.0'),
-        },
-    )
-    token.last_sync = now
-    token.save(update_fields=['last_sync'])
-    return sample
-
-# wger/wearables/signals.py 
-from decimal import Decimal
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from wger.manager.consts import REP_UNIT_CALORIES
-from wger.manager.models import WorkoutLog
-from wger.wearables.models import WearableSample
-
-@receiver(post_save, sender=WearableSample)
-def create_log_for_sample(sender, instance, created, **kwargs):
-    if not created or not instance.calories:
-        return
-    WorkoutLog.objects.get_or_create(
-        user=instance.user,
-        exercise_id=1,  # 临时占位
-        date=instance.start_time,
-        defaults={
-            'repetitions': Decimal(instance.calories),
-            'repetitions_unit_id': REP_UNIT_CALORIES,
-        },
-    )
-    instance.status = 'synced'
-    instance.save(update_fields=['status'])
 
